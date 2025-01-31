@@ -130,10 +130,8 @@ vim.opt.smartcase = true
 
 -- Keep signcolumn on by default
 vim.opt.signcolumn = 'yes'
-
 -- Decrease update time
 vim.opt.updatetime = 250
-
 -- Decrease mapped sequence wait time
 vim.opt.timeoutlen = 300
 
@@ -165,6 +163,39 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+--|||||||||||||TERMINAL||||||||||||||||||||||||||||
+-- Zmienna globalna, aby śledzić bufor terminala
+local terminal_buf = nil
+local terminal_win = nil
+
+-- Funkcja do otwierania lub ukrywania terminala
+function ToggleTerminal()
+  -- Sprawdź, czy terminal już istnieje
+  if terminal_buf and vim.api.nvim_buf_is_valid(terminal_buf) then
+    -- Sprawdź, czy okno terminala jest otwarte
+    if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+      -- Zamknij okno terminala
+      vim.api.nvim_win_close(terminal_win, true)
+      terminal_win = nil
+    else
+      -- Otwórz terminal w nowym splicie
+      vim.cmd 'botright split'
+      vim.cmd 'resize 10'
+      terminal_win = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_buf(terminal_win, terminal_buf)
+    end
+  else
+    -- Stwórz nowy terminal
+    vim.cmd 'botright split'
+    vim.cmd 'resize 10'
+    vim.cmd 'terminal'
+    terminal_buf = vim.api.nvim_get_current_buf()
+    terminal_win = vim.api.nvim_get_current_win()
+  end
+end
+
+-- Mapowanie klawiszy do togglowania terminala
+vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleTerminal()<CR>', { noremap = true, silent = true })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -630,7 +661,7 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
-        -- gopls = {},
+        gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -672,6 +703,7 @@ require('lazy').setup({
       vim.list_extend(ensure_installed, {
         'stylua',
         'prettier', -- Used to format Lua code
+        'goimports',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -800,11 +832,11 @@ require('lazy').setup({
           -- Accept ([y]es) the completion.
           --  This will auto-import if your LSP supports it.
           --  This will expand snippets if the LSP sent a snippet.
-          ['<C-y>'] = cmp.mapping.confirm { select = true },
+          -- ['<C-y>'] = cmp.mapping.confirm { select = true },
 
           -- If you prefer more traditional completion keymaps,
           -- you can uncomment the following lines
-          --['<CR>'] = cmp.mapping.confirm { select = true },
+          ['<CR>'] = cmp.mapping.confirm { select = true },
           --['<Tab>'] = cmp.mapping.select_next_item(),
           --['<S-Tab>'] = cmp.mapping.select_prev_item(),
 
@@ -890,6 +922,7 @@ require('lazy').setup({
         },
       }
     end,
+
   },
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
